@@ -150,9 +150,15 @@ def analyze(conditions):
 
 
 def satellite_status():
+    metadata_url = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer?f=json"
+    request = Request(metadata_url, headers={"User-Agent": "SafeRoute-AI-Prototype/1.0"})
+    with urlopen(request, timeout=8) as response:
+        metadata = json.loads(response.read().decode("utf-8"))
     return {
         "available": True,
         "provider": "Esri World Imagery",
+        "serviceName": metadata.get("name", "World Imagery"),
+        "serviceStatus": metadata.get("status", "online"),
         "purpose": "Live satellite basemap and visual route verification",
         "tileUrl": "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
         "usedForRiskScore": False,
@@ -298,7 +304,10 @@ class SafeRouteHandler(SimpleHTTPRequestHandler):
                 self.send_json({"status": "unavailable", "error": str(error)}, status=503)
             return
         if path == "/api/satellite-status":
-            self.send_json(satellite_status())
+            try:
+                self.send_json(satellite_status())
+            except (OSError, KeyError, ValueError, json.JSONDecodeError) as error:
+                self.send_json({"available": False, "provider": "Esri World Imagery", "error": str(error)}, status=503)
             return
         if path == "/api/routes":
             query = parse_qs(urlparse(self.path).query)

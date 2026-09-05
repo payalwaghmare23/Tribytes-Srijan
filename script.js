@@ -276,6 +276,19 @@ async function syncLiveSituation() {
   }
 }
 
+async function syncSatelliteStatus() {
+  try {
+    const response = await fetch('/api/satellite-status');
+    const status = await response.json();
+    if (!status.available) return;
+    document.querySelector('.map-canvas')?.setAttribute('data-satellite-source', status.provider);
+    const badge = document.querySelector('.satellite-live-badge');
+    if (badge) badge.textContent = `◉ ${status.serviceName || 'Satellite imagery'} online`;
+  } catch {
+    // The Leaflet imagery layer can still load directly if the metadata endpoint is unavailable.
+  }
+}
+
 function updateGoogleJourneyLinks() {
   document.querySelectorAll('.route-map-link').forEach(link => {
     if (!routeLinks[link.closest('.route-card')?.querySelector('h3')?.textContent?.slice(-1)]) link.href = googleJourneyUrl();
